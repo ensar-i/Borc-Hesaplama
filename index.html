@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-        <meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="LU-1lhM4pSTDLKlZqp0ZvLoZuRCq7JuAEBbdwfKG7E8" />
-        <title>Borç Hesaplama</title>
-        <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.min.js"></script>
+    <title>Borç Hesaplama</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         :root { --primary: #2c3e50; --success: #27ae60; --danger: #c0392b; --blue: #3498db; --warning: #f39c12; --purple: #8e44ad; --light: #ecf0f1; }
@@ -45,8 +46,17 @@
         #fileInput { display: none; }
         .info-text { color: #666; font-size: 12px; margin-top: 5px; display: block; }
 
-        /* Yeni Faiz Türü Ekleme Alanı */
         .new-type-area { text-align: center; margin-top: 15px; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; }
+        .payment-title { margin-top: 20px; color: var(--danger); border-bottom: 1px dashed var(--danger); padding-bottom: 5px; }
+
+        @media (max-width: 992px) {
+            .lab-grid { grid-template-columns: 1fr 1fr; }
+            .results-container { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .lab-grid, .date-grid, .calc-action-area { grid-template-columns: 1fr; flex-direction: column; }
+            table { font-size: 12px; display: block; overflow-x: auto; }
+        }
     </style>
 </head>
 <body>
@@ -86,7 +96,7 @@
         <button class="btn btn-add" onclick="addPrincipal('Yargılama Gideri')">➕ Yargılama Gideri</button>
         <button class="btn btn-add" style="background:var(--warning)" onclick="addPrincipal('')">➕ Manuel Kalem</button>
     </div>
-    <small class="info-text">* "Alacak Kalemleri" ekleyebilirsiniz. "Manuel Kalem" ile kendi alacak türünüzü ekleyebilirsiniz. Silmek istediğinizi silebilirsiniz.</small>
+    <small class="info-text">* "Alacak Kalemleri" ekleyebilirsiniz. "Manuel Kalem" ile kendi alacak türünüzü ekleyebilirsiniz.</small>
 
     <h3 style="margin-top:30px;">2. Tahsilat / Ara Ödemeler</h3>
     <table id="paymentTable">
@@ -101,7 +111,7 @@
         <tbody oninput="calculate()" onchange="calculate()"></tbody>
     </table>
     <button class="btn btn-add" onclick="addPayment()">➕ Ödeme Ekle</button>
-    <small class="info-text">* Ara ödemeler varsa ekleyebilirsiniz. Ara ödemeler, TBK m. 100'e göre hesaplanacaktır.</small>
+    <small class="info-text">* Ara ödemeler varsa ekleyebilirsiniz. Ara ödemeler, TBK m. 100'e göre (Önce birikmiş faizler, sonra anapara) hesaplanacaktır.</small>
 
     <div class="calc-row">
         <div class="date-grid">
@@ -113,8 +123,7 @@
             <button class="btn btn-calc" onclick="calculate()">⚙️ HESAPLAMALARI GÜNCELLE</button>
             <button class="btn btn-clear" onclick="clearAll()">🗑️ TEMİZLE</button>
         </div>
-
-        <small class="info-text">* "Takip Tarihi" veya "Güncel Tarih" durumuna göre seçeceğiniz iki farklı tarih için hesap yapabilirsiniz.</small>
+        <small class="info-text">* Verileriniz tarayıcı hafızasına güvenli biçimde anlık kaydedilir. İki farklı tarih durumu için eşzamanlı ekstre alabilirsiniz.</small>
     </div>
 
     <div class="results-container">
@@ -129,7 +138,6 @@
         <input type="file" id="fileInput" accept=".json" onchange="loadJSON(this)">
         <button class="btn" style="background:var(--primary); color:white" onclick="document.getElementById('fileInput').click()">📂 Yedekten Geri Dön</button>
     </div>
-    <small class="info-text" style="text-align:center;">* Hesap sonucunu PDF ya da Excel formatında indirebilirsiniz. Ayarları yedekleyerek sonraki hesaplarda kullanabilir ya da yedekli ayardan geri getirebilirsiniz.</small>
 
     <hr style="margin: 30px 0;">
 
@@ -140,10 +148,8 @@
         <input type="text" id="newInterestName" placeholder="Yeni Faiz Adı (Örn: REESKONT)" style="width:250px; display:inline-block; margin-right:10px;">
         <button class="btn" style="background:var(--blue); color:white;" onclick="addNewInterestType()">➕ Yeni Faiz Türü Tanımla</button>
         <small class="info-text" style="margin-top:8px;">* Yeni bir faiz türü ismi girin ve açılan pencereden tarih ve oranları ekleyin.</small>
-            <small class="info-text" style="text-align:center;">* Yasal Faiz ve Avans Faiz oranlarını güncelleyebilirsiniz. Güncelleme yaptıktan sonra "Ayarları Yedekle" butonunu tıklayın.</small>
-        </div>
-
-        <small class="info-text" style="text-align:center;">Bu hesaplama bilgilendirme amaçlıdır. Hesaplamaların güncelliği ve doğruluğu kontrol edilmelidir.</small>
+    </div>
+    <small class="info-text" style="text-align:center; margin-top: 15px;">Bu hesaplama bilgilendirme amaçlıdır. Hesaplamaların güncelliği ve doğruluğu kontrol edilmelidir.</small>
 </div>
 
 <div id="overlay" class="overlay" onclick="closeModal()"></div>
@@ -185,8 +191,9 @@ const getToday = () => new Date().toISOString().split('T')[0];
 function formatAmountInput(el) {
     let val = el.value.replace(/\D/g, "");
     if (!val) return;
-    el.value = (parseInt(val) / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+    el.value = (parseInt(val) / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if(el.id === 'labPrincipal') runLabCalc();
+    calculate();
 }
 
 function parseNum(str) {
@@ -197,6 +204,15 @@ function parseNum(str) {
 
 function formatNum(num) {
     return num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function safeTR(text) {
+    return text.replace(/Ğ/g, 'G').replace(/ğ/g, 'g')
+               .replace(/Ü/g, 'U').replace(/ü/g, 'u')
+               .replace(/Ş/g, 'S').replace(/ş/g, 's')
+               .replace(/İ/g, 'I').replace(/ı/g, 'i')
+               .replace(/Ö/g, 'O').replace(/ö/g, 'o')
+               .replace(/Ç/g, 'C').replace(/ç/g, 'c');
 }
 
 function runLabCalc() {
@@ -223,18 +239,21 @@ function addPrincipal(name = "", amount = "", type = "yasal", lockType = false, 
         <td><input class="pName" value="${name}" placeholder="Örn: Kıdem Tazminatı"></td>
         <td><input class="pAmount" oninput="formatAmountInput(this)" value="${amount ? formatNum(amount) : ''}" placeholder="0,00"></td>
         <td><select class="pType" ${lockType ? 'disabled' : ''} onchange="calculate()"></select></td>
-        <td><input type="date" class="pStart" value="${customDate || getToday()}"></td>
-        <td><button onclick="this.parentElement.parentElement.remove();calculate()" style="color:red; background:none; border:none; cursor:pointer">✖</button></td>`;
+        <td><input type="date" class="pStart" value="${customDate || getToday()}" onchange="calculate()"></td>
+        <td><button onclick="if(confirm('Bu alacak kalemini tablodan silmek istediğinize emin misiniz?')){this.parentElement.parentElement.remove();calculate();}" style="color:red; background:none; border:none; cursor:pointer">✖</button></td>`;
+    
+    let select = row.querySelector('.pType');
+    select.setAttribute('data-val', type); // Hafızadaki tür bilgisini kaybetmemek için bağlama noktası
     updateInterestSelectors();
 }
 
 function addPayment() {
     let row = document.querySelector("#paymentTable tbody").insertRow();
     row.innerHTML = `
-        <td><input type="date" class="payDate" value="${getToday()}"></td>
+        <td><input type="date" class="payDate" value="${getToday()}" onchange="calculate()"></td>
         <td><input class="payAmount" oninput="formatAmountInput(this)" placeholder="0,00"></td>
-        <td><input class="payDesc" placeholder="Örn: Maaş Haczi Tahsilatı"></td>
-        <td><button onclick="this.parentElement.parentElement.remove();calculate()" style="color:red; background:none; border:none; cursor:pointer">✖</button></td>`;
+        <td><input class="payDesc" placeholder="Örn: Maaş Haczi Tahsilatı" oninput="calculate()"></td>
+        <td><button onclick="if(confirm('Bu ödemeyi tablodan silmek istediğinize emin misiniz?')){this.parentElement.parentElement.remove();calculate();}" style="color:red; background:none; border:none; cursor:pointer">✖</button></td>`;
 }
 
 function updateInterestSelectors() {
@@ -246,20 +265,16 @@ function updateInterestSelectors() {
     labSelect.innerHTML = '';
     settingsCont.innerHTML = '';
 
-
     Object.keys(rateData).forEach(key => {
-
         let opt = document.createElement('option'); 
         opt.value = key; 
         opt.innerText = key.toUpperCase();
         labSelect.appendChild(opt);
 
-
         const btnGroup = document.createElement('div');
         btnGroup.style.display = "inline-flex";
         btnGroup.style.alignItems = "center";
         btnGroup.style.margin = "5px";
-
 
         const btn = document.createElement('button'); 
         btn.className = 'btn'; 
@@ -268,7 +283,6 @@ function updateInterestSelectors() {
         btn.innerText = key.toUpperCase(); 
         btn.onclick = () => showModal(key);
         btnGroup.appendChild(btn);
-
 
         if (key !== 'yasal' && key !== 'avans') {
             const delBtn = document.createElement('button');
@@ -289,9 +303,8 @@ function updateInterestSelectors() {
 
     labSelect.value = rateData[curLab] ? curLab : 'yasal';
 
-
     selects.forEach(select => {
-        const val = select.value; 
+        const val = select.getAttribute('data-val') || select.value; 
         select.innerHTML = '';
         Object.keys(rateData).forEach(k => {
             const opt = document.createElement('option'); 
@@ -304,8 +317,8 @@ function updateInterestSelectors() {
         fz.innerText = 'FAİZSİZ';
         select.appendChild(fz);
 
-
         select.value = (rateData[val] || val === 'faizsiz') ? val : 'yasal';
+        select.setAttribute('data-val', select.value);
     });
 }
 
@@ -339,6 +352,7 @@ function stepCalc(principal, start, end, type) {
 function calculate() {
     processCalculation(new Date(document.getElementById("endDate1").value), "result1");
     processCalculation(new Date(document.getElementById("endDate2").value), "result2");
+    saveToLocalStorage();
 }
 
 function processCalculation(endDate, targetId) {
@@ -347,7 +361,7 @@ function processCalculation(endDate, targetId) {
     document.querySelectorAll("#principalTable tbody tr").forEach(tr => {
         let amt = parseNum(tr.querySelector(".pAmount").value);
         if(amt > 0) items.push({
-            name: tr.querySelector(".pName").value,
+            name: tr.querySelector(".pName").value || "Manuel Kalem",
             amount: amt,
             type: tr.querySelector(".pType").value,
             lastDate: new Date(tr.querySelector(".pStart").value),
@@ -359,91 +373,198 @@ function processCalculation(endDate, targetId) {
     document.querySelectorAll("#paymentTable tbody tr").forEach(tr => {
         let amt = parseNum(tr.querySelector(".payAmount").value);
         let dt = new Date(tr.querySelector(".payDate").value);
-        if(amt > 0 && !isNaN(dt.getTime())) pays.push({ date: dt, amount: amt });
+        let desc = tr.querySelector(".payDesc").value || "Ara Ödeme";
+        if(amt > 0 && !isNaN(dt.getTime())) pays.push({ date: dt, amount: amt, desc: desc });
     });
     pays.sort((a,b) => a.date - b.date);
 
+    let paymentLog = [];
+
     pays.forEach(pay => {
         if (pay.date > endDate) return;
+
         items.forEach(p => {
             if (pay.date > p.lastDate) {
                 p.interest += stepCalc(p.amount, p.lastDate, pay.date, p.type);
                 p.lastDate = new Date(pay.date);
             }
         });
+
         let rem = pay.amount;
+        let paidToInterest = 0;
+        let paidToPrincipal = 0;
+
         items.forEach(p => {
             if (rem <= 0) return;
             if (p.interest > 0) {
-                if (rem >= p.interest) { rem -= p.interest; p.interest = 0; }
-                else { p.interest -= rem; rem = 0; }
+                if (rem >= p.interest) { rem -= p.interest; paidToInterest += p.interest; p.interest = 0; }
+                else { p.interest -= rem; paidToInterest += rem; rem = 0; }
             }
-            if (rem > 0 && p.amount > 0) {
-                if (rem >= p.amount) { rem -= p.amount; p.amount = 0; }
-                else { p.amount -= rem; rem = 0; }
+        });
+
+        items.forEach(p => {
+            if (rem <= 0) return;
+            if (p.amount > 0) {
+                if (rem >= p.amount) { rem -= p.amount; paidToPrincipal += p.amount; p.amount = 0; }
+                else { p.amount -= rem; paidToPrincipal += rem; rem = 0; }
             }
+        });
+
+        let currentTotal = items.reduce((sum, p) => sum + p.amount + p.interest, 0);
+        paymentLog.push({
+            date: pay.date.toLocaleDateString('tr-TR'),
+            desc: pay.desc,
+            amount: pay.amount,
+            interestCut: paidToInterest,
+            principalCut: paidToPrincipal,
+            remaining: currentTotal
         });
     });
 
     items.forEach(p => {
-        if (endDate > p.lastDate) p.interest += stepCalc(p.amount, p.lastDate, endDate, p.type);
+        if (endDate > p.lastDate) {
+            p.interest += stepCalc(p.amount, p.lastDate, endDate, p.type);
+            p.lastDate = new Date(endDate);
+        }
     });
 
-    renderResult(items, endDate, targetId);
+    renderResult(items, endDate, targetId, paymentLog);
 }
 
-function renderResult(data, date, targetId) {
+function renderResult(data, date, targetId, paymentLog) {
     let div = document.getElementById(targetId);
     let tP = 0, tI = 0;
     data.forEach(p => { tP += p.amount; tI += p.interest; });
 
-    let html = `<h4>📅 Tarih: ${date.toLocaleDateString('tr-TR')}</h4>
+    let html = `<h4>📅 Rapor Tarihi: ${date.toLocaleDateString('tr-TR')}</h4>
                 <div class="summary-card">
-                    Ana Para: ${formatNum(tP)} TL | Faiz: ${formatNum(tI)} TL
+                    Kalan Anapara: ${formatNum(tP)} TL | Kalan Faiz: ${formatNum(tI)} TL
                 </div>
                 <table id="table-${targetId}">
                 <thead><tr><th>Kalem</th><th>Kalan Anapara</th><th>Faiz</th><th>Toplam</th></tr></thead><tbody>`;
     data.forEach(p => {
         html += `<tr><td>${p.name}</td><td>${formatNum(p.amount)}</td><td>${formatNum(p.interest)}</td><td><b>${formatNum(p.amount+p.interest)}</b></td></tr>`;
     });
-    html += `</tbody></table><div class="total-badge">GENEL TOPLAM: ${formatNum(tP + tI)} TL</div>`;
+    html += `</tbody></table>`;
+
+    if (paymentLog.length > 0) {
+        html += `<h4 class="payment-title">💸 Tahsilat & Mahsup Detayları (TBK m.100)</h4>`;
+        html += `<table id="table-${targetId}-payments" style="border: 1px dashed var(--danger); font-size:12px;">
+                <thead><tr style="background: #fdf2f2; color:#333;"><th style="color:#333">Tarih</th><th style="color:#333">Açıklama</th><th style="color:#333">Ödenen</th><th style="color:#333">Faizden Düşen</th><th style="color:#333">Anaparadan Düşen</th><th style="color:#333">Kalan Borç</th></tr></thead><tbody>`;
+        paymentLog.forEach(log => {
+            html += `<tr><td>${log.date}</td><td>${log.desc}</td><td>${formatNum(log.amount)}</td><td style="color:var(--danger)">${formatNum(log.interestCut)}</td><td style="color:var(--success)">${formatNum(log.principalCut)}</td><td><b>${formatNum(log.remaining)} TL</b></td></tr>`;
+        });
+        html += `</tbody></table>`;
+    }
+
+    html += `<div class="total-badge">GENEL TOPLAM: ${formatNum(tP + tI)} TL</div>`;
     div.innerHTML = html;
 }
 
+function saveToLocalStorage() {
+    let appState = {
+        principals: [],
+        payments: [],
+        d1: document.getElementById("endDate1").value,
+        d2: document.getElementById("endDate2").value
+    };
+    document.querySelectorAll("#principalTable tbody tr").forEach(tr => {
+        appState.principals.push({
+            name: tr.querySelector(".pName").value,
+            amount: tr.querySelector(".pAmount").value,
+            type: tr.querySelector(".pType").getAttribute('data-val') || tr.querySelector(".pType").value,
+            start: tr.querySelector(".pStart").value
+        });
+    });
+    document.querySelectorAll("#paymentTable tbody tr").forEach(tr => {
+        appState.payments.push({
+            date: tr.querySelector(".payDate").value,
+            amount: tr.querySelector(".payAmount").value,
+            desc: tr.querySelector(".payDesc").value
+        });
+    });
+    localStorage.setItem("borcHesap_state", JSON.stringify(appState));
+}
+
+function loadFromLocalStorage() {
+    let saved = localStorage.getItem("borcHesap_state");
+    if (!saved) {
+        addPrincipal("Asıl Alacak");
+        addPrincipal("İlam Vekalet Ücreti");
+        addPrincipal("Yargılama Gideri");
+        return;
+    }
+    let state = JSON.parse(saved);
+    document.getElementById("endDate1").value = state.d1 || getToday();
+    document.getElementById("endDate2").value = state.d2 || getToday();
+    
+    document.querySelector("#principalTable tbody").innerHTML = "";
+    state.principals.forEach(p => {
+        addPrincipal(p.name, parseNum(p.amount), p.type, false, p.start);
+    });
+    document.querySelector("#paymentTable tbody").innerHTML = "";
+    state.payments.forEach(p => {
+        let row = document.querySelector("#paymentTable tbody").insertRow();
+        row.innerHTML = `
+            <td><input type="date" class="payDate" value="${p.date}" onchange="calculate()"></td>
+            <td><input class="payAmount" oninput="formatAmountInput(this)" value="${p.amount}" placeholder="0,00"></td>
+            <td><input class="payDesc" value="${p.desc}" placeholder="Örn: Maaş Haczi Tahsilatı" oninput="calculate()"></td>
+            <td><button onclick="if(confirm('Bu ödemeyi tablodan silmek istediğinize emin misiniz?')){this.parentElement.parentElement.remove();calculate();}" style="color:red; background:none; border:none; cursor:pointer">✖</button></td>`;
+    });
+    calculate();
+}
+
 function clearAll() {
-    if(confirm("Tüm tablo verileri silinecek. Emin misiniz?")) {
+    if(confirm("Tüm tablo verileri sıfırlanacaktır. Onaylıyor musunuz?")) {
+        localStorage.removeItem("borcHesap_state");
         document.querySelector("#principalTable tbody").innerHTML = "";
         document.querySelector("#paymentTable tbody").innerHTML = "";
         document.getElementById("result1").innerHTML = "";
         document.getElementById("result2").innerHTML = "";
+        document.getElementById("endDate1").value = getToday();
+        document.getElementById("endDate2").value = getToday();
         addPrincipal("Asıl Alacak");
         addPrincipal("İlam Vekalet Ücreti");
         addPrincipal("Yargılama Gideri");
+        calculate();
     }
 }
 
 function downloadPDF() {
     const { jsPDF } = window.jspdf; const doc = new jsPDF();
-    doc.text("BORC HESAPLAMA RAPORU", 105, 15, {align:"center"});
-    if(document.querySelector("#table-result1")) {
-        doc.text(`1. Tarih: ${document.getElementById("endDate1").value}`, 14, 25);
-        doc.autoTable({ html: '#table-result1', startY: 28 });
-    }
-    let nY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 15 : 25;
-    if(document.querySelector("#table-result2")) {
-        doc.text(`2. Tarih: ${document.getElementById("endDate2").value}`, 14, nY);
-        doc.autoTable({ html: '#table-result2', startY: nY + 3 });
-    }
-    doc.save("Rapor.pdf");
+    doc.text(safeTR("BORC HESAPLAMA RAPORU"), 105, 15, {align:"center"});
+    
+    let currentY = 25;
+    
+    ["1", "2"].forEach(num => {
+        if(document.querySelector(`#table-result${num}`)) {
+            doc.text(safeTR(`${num}. Hesap Raporu (Tarih: ${document.getElementById("endDate"+num).value})`), 14, currentY);
+            doc.autoTable({ html: `#table-result${num}`, startY: currentY + 3, didParseCell: (data) => { data.cell.text = data.cell.text.map(safeTR); } });
+            currentY = doc.lastAutoTable.finalY + 10;
+            
+            if(document.querySelector(`#table-result${num}-payments`)) {
+                doc.text(safeTR(`-> ${num}. Donem Tahsilat Mahsup Dokumu`), 14, currentY);
+                doc.autoTable({ html: `#table-result${num}-payments`, startY: currentY + 3, didParseCell: (data) => { data.cell.text = data.cell.text.map(safeTR); } });
+                currentY = doc.lastAutoTable.finalY + 15;
+            }
+        }
+    });
+    doc.save("Hesap_Raporu.pdf");
 }
 
 function downloadExcel() {
     let wb = XLSX.utils.book_new();
     ["result1", "result2"].forEach((id, i) => {
         const el = document.querySelector(`#table-${id}`);
-        if(el) XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(el), "Hesap " + (i+1));
+        if(el) {
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(el), "Hesap Özeti " + (i+1));
+            const payEl = document.querySelector(`#table-${id}-payments`);
+            if (payEl) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(payEl), "Tahsilat Detayı " + (i+1));
+            }
+        }
     });
-    XLSX.writeFile(wb, "Rapor.xlsx");
+    XLSX.writeFile(wb, "Hesap_Dokumu.xlsx");
 }
 
 function saveJSON() { 
@@ -457,7 +578,6 @@ function loadJSON(input) {
     reader.onload = (e) => { rateData = JSON.parse(e.target.result); updateInterestSelectors(); calculate(); };
     reader.readAsText(file);
 }
-
 
 let curType = "";
 function showModal(type) {
@@ -476,15 +596,12 @@ function renderModal() {
 }
 function addRateRow() { rateData[curType].push({date: getToday(), rate: 0.09}); renderModal(); }
 
-
 document.getElementById("endDate1").value = getToday();
 document.getElementById("endDate2").value = getToday();
 document.getElementById("labStart").value = "2023-01-01";
 document.getElementById("labEnd").value = getToday();
-addPrincipal("Asıl Alacak");
-addPrincipal("İlam Vekalet Ücreti");
-addPrincipal("Yargılama Gideri");
 updateInterestSelectors();
+loadFromLocalStorage();
 </script>
 </body>
 </html>
